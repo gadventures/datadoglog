@@ -5,7 +5,7 @@ Python logging handlers for sending logs to Data Dog
 
 to requirements.txt add
 
-    -e git+git@github.com:gadventures/datadoglog.git@0.1.0#egg=datadoglog
+    -e git+https://github.com/gadventures/datadoglog.git@0.1.0#egg=datadoglog
 
 ## Setup
 

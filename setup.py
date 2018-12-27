@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="datadoglog",
-    version="0.0.1",
+    version="0.1.0",
     author="Jakub Labath",
     author_email="jakubl@gadventures.com",
     description="Logging to datadog log",

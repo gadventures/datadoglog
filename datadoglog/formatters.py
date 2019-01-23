@@ -12,7 +12,7 @@ class FormatFactory:
     source = None
     env = None
 
-    def __init__(self, app_key: str, source: str, service: str, env: str) -> None:
+    def __init__(self, source: str, service: str, env: str, app_key: str=None) -> None:
         self.app_key = app_key
         self.service = service
         self.source = source
@@ -41,6 +41,10 @@ class FormatFactory:
             data["error.message"] = str(value)
             data["error.kind"] = str(extype)
             data["error.stack"] = "".join(traceback.format_tb(tb))
+
+        json_data  = json.dumps(data)
+        if not self.app_key:
+            return json_data
         return "{} {}".format(self.app_key, json.dumps(data))
 
     def format(self, record: logging.LogRecord) -> str:

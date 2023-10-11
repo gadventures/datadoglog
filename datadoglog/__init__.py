@@ -1,7 +1,7 @@
-from .formatters import DatadogFormatFactory
+from .formatters import DatadogFormatter
 from .handlers import start_datadog_logger
 
 __all__ = (
-    "DatadogFormatFactory",
+    "DatadogFormatter",
     "start_datadog_logger",
 )

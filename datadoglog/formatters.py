@@ -6,7 +6,7 @@ from datetime import datetime
 from datetime import timezone
 
 
-class DatadogFormatFactory:
+class DatadogFormatter:
     """
     Formats our log record into a form that Datadog understands.
 
@@ -22,19 +22,19 @@ class DatadogFormatFactory:
         "source",
     )
 
-    def __init__(self, app_key: str, source: str, service: str, env: str) -> None:
+    def __init__(self, app_key: str, env: str, service: str, source: str) -> None:
         self.app_key = app_key
         self.env = env
         self.host = os.uname().nodename
         self.service = service
         self.source = source
 
-    def my_format(self, record: logging.LogRecord) -> str:
-        timestamp = datetime.fromtimestamp(record.created, timezone.utc)
-
+    def _format(self, record: logging.LogRecord) -> str:
         data = {
             # when
-            "syslog.timestamp": timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "timestamp": datetime.fromtimestamp(record.created, timezone.utc).strftime(
+                "%Y-%m-%dT%H:%M:%S.%fZ"
+            ),
             # standard facets/attributes
             "dd.env": self.env,
             "dd.host": self.host,
@@ -54,14 +54,19 @@ class DatadogFormatFactory:
             (exc_type, exc_value, exc_tb) = exc_info
             data["error.kind"] = str(exc_type)
             data["error.message"] = str(exc_value)
-            data["error.stack"] = "\n".join(traceback.format_tb(exc_tb))
+            # NOTE: format_tb, which calls format_list, will add newlines for
+            #       us, hence the join on empty-string.
+            data["error.stack"] = "".join(traceback.format_tb(exc_tb))
 
         return f"{self.app_key} {json.dumps(data)}"
 
     def format(self, record: logging.LogRecord) -> str:
-        # yeah python logging expects formatting of a message to also adjust
-        # internal attributes of LogRecord - so sad
-        # on the other hand record.message is the only thing that will matter
-        # from here on
-        record.message = self.my_format(record)
+        """
+        Format this log record.
+
+        Python logging expects formatting of a message to also adjust the
+        internal attributes of LogRecord (so sad). On the other hand,
+        record.message is the only thing that will matter from here on.
+        """
+        record.message = self._format(record)
         return record.message

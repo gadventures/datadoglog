@@ -21,21 +21,23 @@ class DatadogHandler(logging.handlers.SocketHandler):
         code anyway. This also gives less chance for users to mess things up
         as well
         """
-        # init parent with Datadog ingest endpoint
+        # Init parent with Datadog log intake endpoint
+        #
+        # See: https://docs.datadoghq.com/logs/log_collection/?tab=host#supported-endpoints  # noqa
         super().__init__("intake.logs.datadoghq.com", 10516)
 
         # print_debug flag
         self.print_debug = print_debug
 
+    def close(self):
+        """closes the parent handler"""
+        if self.print_debug:
+            print("datadoglog: close")
+        super().close()
+
     def makePickle(self, record: logging.LogRecord) -> bytes:
         """prepares record for writing over the wire"""
         return f"{record.message}\n".encode()
-
-    def send(self, s):
-        """sends serialized s over the wire"""
-        if self.print_debug:
-            print(f"datadoglog: send {s}")
-        super().send(s)
 
     def makeSocket(self, timeout: int = 1) -> ssl.SSLSocket:
         """
@@ -51,14 +53,20 @@ class DatadogHandler(logging.handlers.SocketHandler):
         # while having no idea what parts of their code we are depending on ).
         #
         # NOTE: written and tested for python 3.6
-        sock = socket.create_connection(self.address, timeout=timeout)
-        conn = context.wrap_socket(sock, server_hostname=self.host)
+        conn = socket.create_connection(self.address, timeout=timeout)
+        sock = context.wrap_socket(conn, server_hostname=self.host)
         if self.print_debug:
             print(
-                f"datadoglog: makeSocket connected {conn} to {self.address} "
-                f"with {conn.version()}"
+                f"datadoglog: makeSocket connected {sock} to {self.address} "
+                f"with {sock.version()}"
             )
-        return conn
+        return sock
+
+    def send(self, s):
+        """sends serialized s over the wire"""
+        if self.print_debug:
+            print(f"datadoglog: send {s}")
+        super().send(s)
 
 
 def start_datadog_logger(

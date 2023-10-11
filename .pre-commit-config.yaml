@@ -1,0 +1,47 @@
+default_language_version:
+  python: python3.8
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-ast
+      - id: check-byte-order-marker
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.15.0
+    hooks:
+      - id: pyupgrade
+        args: ["--py37-plus"]
+
+  - repo: https://github.com/asottile/reorder_python_imports
+    rev: v3.12.0
+    hooks:
+      - id: reorder-python-imports
+        name: Reorder Python imports
+        args: ["--application-directories", "datadoglog"]
+
+  - repo: https://github.com/psf/black
+    rev: 23.9.1
+    hooks:
+      - id: black
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+        additional_dependencies:
+          - flake8-bugbear
+          - flake8-implicit-str-concat
+        args: ["--max-line-length", "88"]
+
+  - repo: https://github.com/pycqa/pylint
+    rev: v3.0.1
+    hooks:
+      - id: pylint
+        args: ["--disable", "bad-inline-option,broad-exception-caught,deprecated-pragma,file-ignored,invalid-name,locally-disabled,missing-class-docstring,missing-function-docstring,missing-module-docstring,no-else-raise,raw-checker-failed,suppressed-message,too-few-public-methods,use-symbolic-message-instead,useless-suppression"]

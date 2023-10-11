@@ -1,6 +1,6 @@
-import os
 import json
 import logging
+import os
 import traceback
 from datetime import datetime
 from datetime import timezone
@@ -10,10 +10,17 @@ class DatadogFormatFactory:
     """
     Formats our log record into a form that Datadog understands.
 
-    More information here: https://docs.datadoghq.com/logs/log_configuration/attributes_naming_convention/
+    More information here:
+    https://docs.datadoghq.com/logs/log_configuration/attributes_naming_convention/
     """
 
-    __slots__ = ("app_key", "service", "source", "env")
+    __slots__ = (
+        "app_key",
+        "env",
+        "host",
+        "service",
+        "source",
+    )
 
     def __init__(self, app_key: str, source: str, service: str, env: str) -> None:
         self.app_key = app_key
@@ -47,7 +54,7 @@ class DatadogFormatFactory:
             (exc_type, exc_value, exc_tb) = exc_info
             data["error.kind"] = str(exc_type)
             data["error.message"] = str(exc_value)
-            data["error.stack"] = "\n".join(traceback.format_tb(tb))
+            data["error.stack"] = "\n".join(traceback.format_tb(exc_tb))
 
         return f"{self.app_key} {json.dumps(data)}"
 

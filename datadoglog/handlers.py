@@ -13,7 +13,7 @@ class DatadogHandler(logging.handlers.SocketHandler):
     To understand the exact nature of what this Handler does, reference:
     https://github.com/python/cpython/blob/master/Lib/logging/handlers.py
     """
-    
+
     def __init__(self, *, print_debug: bool = False):
         """
         Initialize the parent SocketHandler with datadog's info. Hardcoding
@@ -29,7 +29,7 @@ class DatadogHandler(logging.handlers.SocketHandler):
 
     def makePickle(self, record: logging.LogRecord) -> bytes:
         """prepares record for writing over the wire"""
-        return f"{record.message}\n".encode("utf-8")
+        return f"{record.message}\n".encode()
 
     def send(self, s):
         """sends serialized s over the wire"""
@@ -54,11 +54,16 @@ class DatadogHandler(logging.handlers.SocketHandler):
         sock = socket.create_connection(self.address, timeout=timeout)
         conn = context.wrap_socket(sock, server_hostname=self.host)
         if self.print_debug:
-            print(f"datadoglog: makeSocket connected {conn} to {self.address} with {conn.version()}")
+            print(
+                f"datadoglog: makeSocket connected {conn} to {self.address} "
+                f"with {conn.version()}"
+            )
         return conn
 
 
-def start_datadog_logger(queue: Queue, *, print_debug: bool = False) -> Callable[[], None]:
+def start_datadog_logger(
+    queue: Queue, *, print_debug: bool = False
+) -> Callable[[], None]:
     """
     This starts the QueueListener in separate thread, which will consume and
     forward all the messages to Datadog, so the logging should never block the

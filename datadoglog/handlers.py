@@ -1,78 +1,82 @@
 import logging
 import socket
 import ssl
-import typing
 from queue import Queue
+from typing import Callable
 
 
-def do_debug() -> bool:
-    return False
+class DatadogHandler(logging.handlers.SocketHandler):
+    """
+    DataDogHandler is a subclass of SocketHandler that sends logs to DD's
+    Log intake endpoint.
 
-# reference to fuly grasp what is happening here
-# https://github.com/python/cpython/blob/master/Lib/logging/handlers.py
-
-
-class DogHandler(logging.handlers.SocketHandler):
-
-    def __init__(self):
-        # initialize parent with datadogs info
-        # hardcoding is fine given that should this change
-        # we likely need to fix this code anyway
-        # gives less chance for users to mess things up
-        # as well
+    To understand the exact nature of what this Handler does, reference:
+    https://github.com/python/cpython/blob/master/Lib/logging/handlers.py
+    """
+    
+    def __init__(self, *, print_debug: bool = False):
+        """
+        Initialize the parent SocketHandler with datadog's info. Hardcoding
+        this is fine, as, should this change we will likely need to fix this
+        code anyway. This also gives less chance for users to mess things up
+        as well
+        """
+        # init parent with Datadog ingest endpoint
         super().__init__("intake.logs.datadoghq.com", 10516)
 
-    def makePickle(self, record):
-        """prepares record for writing over wire"""
-        return "{}\n".format(record.message).encode("utf8")
+        # print_debug flag
+        self.print_debug = print_debug
+
+    def makePickle(self, record: logging.LogRecord) -> bytes:
+        """prepares record for writing over the wire"""
+        return f"{record.message}\n".encode("utf-8")
 
     def send(self, s):
-        """sends serialized data s over wire"""
-        if do_debug():
-            print("DOGDEBUG send", s)
+        """sends serialized s over the wire"""
+        if self.print_debug:
+            print(f"datadoglog: send {s}")
         super().send(s)
 
-    def makeSocket(self, timeout=1):
+    def makeSocket(self, timeout: int = 1) -> ssl.SSLSocket:
         """
-        A factory method which allows subclasses to define the precise
-        type of socket they want.
-        Since our logging data is sensitive we most def want to send it
-        over SSL so we subclass and act accordingly
+        A factory method which allows subclasses to define the precise type of
+        they (DD) want. Since our logging data is sensitive we want to send it
+        over SSL so we subclass from an ssl and act accordingly.
         """
         context = ssl.create_default_context()
 
-        # self.address should contain the host port tuple
-        # that was initialized by the SocketHandler.__init__
-        # here we rely on inner workings of other peoples code
-        # people who encourage us to do so while having no idea
-        # what parts of their code we are depending on
-        # but hey this is official python code and docs
-        # surely they know what they are doing, right?
-        # personally if any of this breaks in future versions of python
-        # not least bit surprised
-        # written and tested for python 3.6
-        s = socket.create_connection(self.address, timeout=timeout)
-        conn = context.wrap_socket(s, server_hostname=self.host)
-        if do_debug():
-            print("DOGDEBUG makeSocket connected {} to {} with {}".format(
-                str(conn), str(self.address), conn.version()))
+        # self.address should contain the (host, port) tuple that was
+        # initialized by the SocketHandler.__init__. Here we rely on inner
+        # workings of other peoples code ( people who encourage us to do so
+        # while having no idea what parts of their code we are depending on ).
+        #
+        # NOTE: written and tested for python 3.6
+        sock = socket.create_connection(self.address, timeout=timeout)
+        conn = context.wrap_socket(sock, server_hostname=self.host)
+        if self.print_debug:
+            print(f"datadoglog: makeSocket connected {conn} to {self.address} with {conn.version()}")
         return conn
 
 
-def start_logger(que: Queue) -> typing.Callable:
+def start_datadog_logger(queue: Queue, *, print_debug: bool = False) -> Callable[[], None]:
     """
-    this starts the QueueListener in separate thread
-    that will just consume and forward all the messages to datadog
-    so logging should never ever block
-    and can be used by any high performance apps
-    it returns a function which called will properly shut down the listener thread
-    and close tcp sockets
+    This starts the QueueListener in separate thread, which will consume and
+    forward all the messages to Datadog, so the logging should never block the
+    client and can be used by any high performance apps. It returns a function,
+    when called will properly shut down the listener thread and close the
+    underlying TCP socket.
     """
-    if do_debug():
-        print('Starting logger for queue', que)
-    handler = DogHandler()
-    listener = logging.handlers.QueueListener(que, handler)
+    if print_debug:
+        print(f"datadoglog: starting logger for queue {queue}")
+
+    # intialize our handler and underlying threaded queue listener
+    handler = DatadogHandler(print_debug=print_debug)
+    listener = logging.handlers.QueueListener(queue, handler)
+
+    # set the log format
     formatter = logging.Formatter("%(message)s")
     handler.setFormatter(formatter)
+
+    # start the listener and return our cancel/stop function to the caller
     listener.start()
     return listener.stop

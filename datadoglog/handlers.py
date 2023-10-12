@@ -92,4 +92,11 @@ def start_datadog_logger(
 
     # start the listener and return our cancel/stop function to the caller
     listener.start()
-    return listener.stop
+
+    def closer():
+        # wait for anything in the queue to process
+        listener.stop()
+        # close the DatadogHandler
+        handler.close()
+
+    return closer

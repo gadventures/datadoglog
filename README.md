@@ -1,28 +1,31 @@
 # datadoglog
-Python logging handlers for sending logs to Data Dog
+
+Python logging handlers for sending logs to Datadog
 
 ## Installation
 
 to `requirements.txt` add
 
-    -e git+https://github.com/gadventures/datadoglog.git@0.1.0#egg=datadoglog
+    -e git+https://github.com/gadventures/datadoglog.git@0.2.0#egg=datadoglog
 
-## Setup
+## Usage
 
-This package uses QueueHandler logger so first thing you need to start the logger thread and give it a Queue
+This package uses the `QueueHandler` logger, so you need to start the logger
+thread and give it a `Queue`.
 
 ```python
 import atexit
 from queue import Queue
-from datadoglog import start_logger
 
-que = Queue()
-stop_func = start_logger(que)
-atexit.register(stop_func)
+from datadoglog import start_datadog_logger
+
+queue = Queue()
+stop_logger = start_datadog_logger(queue)
+atexit.register(stop_logger)
 ```
-    
-Now that the consumer is runnning you can configure your logging
-below is a sample config using python dictConfig
+
+Now that the handler is running you can configure your logging. Below is a
+sample config using python's `dictConfig`.
 
 ```python
 from logging.config import dictConfig
@@ -31,28 +34,29 @@ log_config = {
     "version": 1,
     "formatters": {
         "data_dog": {
-            "()": 'datadoglog.FormatFactory',
-            "app_key": config.DATADOG_APP_KEY,
-            "source": "sieve",
-            "service": "server_log",
-            "env": "production" if config.PROD else "staging",
+            "()": 'datadoglog.DatadogFormatter',
+            "app_key": "<datadog_api_key>",
+            "env": "production",
+            "service": "project-web",
+            "source": "project",
         },
     },
     "handlers": {
-        "my_handler": {
+        "dd_handler": {
             "class": 'logging.handlers.QueueHandler',
-            "queue": que,
-            "level": 'INFO',
             "formatter": 'data_dog',
+            "level": 'INFO',
+            "queue": queue,
         },
     },
     "loggers": {
         "root": {
             "level": "DEBUG",
-            "handlers": ["my_handler"],
+            "handlers": ["dd_handler"],
         },
     },
 }
 
+# set the config
 dictConfig(log_config)
 ```
